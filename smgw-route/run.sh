@@ -54,18 +54,38 @@ while true; do
     
     # Test connectivity to gateway and SMGW (only every 5 minutes to reduce log spam)
     if [ ! -f /tmp/last_ping ] || [ $(($(date +%s) - $(cat /tmp/last_ping))) -gt 300 ]; then
+        # Show routing table in debug mode
+        bashio::log.debug "Current routing table:"
+        bashio::log.debug "$(ip route)"
+        
         bashio::log.info "Testing connectivity to gateway ${GATEWAY_IP}..."
-        if ping -c 1 -W 2 "${GATEWAY_IP}" > /dev/null 2>&1; then
+        GATEWAY_PING_OUTPUT=$(ping -c 1 -W 2 "${GATEWAY_IP}" 2>&1)
+        if [ $? -eq 0 ]; then
             bashio::log.info "✅ Gateway ${GATEWAY_IP} is reachable"
+            bashio::log.debug "Ping result: ${GATEWAY_PING_OUTPUT}"
         else
             bashio::log.warning "⚠️ Gateway ${GATEWAY_IP} is not reachable"
+            bashio::log.debug "Ping output: ${GATEWAY_PING_OUTPUT}"
         fi
         
         bashio::log.info "Testing connectivity to SMGW ${SMGW_IP}..."
-        if ping -c 1 -W 2 "${SMGW_IP}" > /dev/null 2>&1; then
+        SMGW_PING_OUTPUT=$(ping -c 1 -W 2 "${SMGW_IP}" 2>&1)
+        if [ $? -eq 0 ]; then
             bashio::log.info "✅ SMGW ${SMGW_IP} is reachable"
+            bashio::log.debug "Ping result: ${SMGW_PING_OUTPUT}"
         else
             bashio::log.warning "⚠️ SMGW ${SMGW_IP} is not reachable - check GL.iNet connection!"
+            bashio::log.debug "Ping output: ${SMGW_PING_OUTPUT}"
+            
+            # Additional debug information when SMGW is not reachable
+            bashio::log.debug "Checking route to SMGW network:"
+            bashio::log.debug "$(ip route get ${SMGW_IP} 2>&1)"
+            
+            bashio::log.debug "ARP table:"
+            bashio::log.debug "$(ip neigh show)"
+            
+            bashio::log.debug "Network interfaces:"
+            bashio::log.debug "$(ip addr show)"
         fi
         
         date +%s > /tmp/last_ping
