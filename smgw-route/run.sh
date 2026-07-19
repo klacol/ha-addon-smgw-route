@@ -16,25 +16,33 @@ bashio::log.info "Log Level: ${LOG_LEVEL}"
 bashio::log.info "Initial routing table:"
 ip route | while read line; do bashio::log.info "  $line"; done
 
-# Function to add route
-add_route() {
-    bashio::log.info "Adding route: ${SMGW_NETWORK} via ${GATEWAY_IP}"
-    
-    if ip route add "${SMGW_NETWORK}" via "${GATEWAY_IP}"; then
-        bashio::log.info "✅ Route added successfully"
+# Function to check if route exists
+check_route() {
+    # More flexible check - look for network and gateway anywhere in the route
+    if ip route show "${SMGW_NETWORK}" | grep -q "via ${GATEWAY_IP}"; then
         return 0
     else
-        bashio::log.error "Failed to add route"
         return 1
     fi
 }
 
-# Function to check if route exists
-check_route() {
-    if ip route | grep -q "^${SMGW_NETWORK} via ${GATEWAY_IP}"; then
+# Function to add route
+add_route() {
+    bashio::log.info "Adding route: ${SMGW_NETWORK} via ${GATEWAY_IP}"
+    
+    # Try to add the route
+    if ip route add "${SMGW_NETWORK}" via "${GATEWAY_IP}" 2>&1 | tee /tmp/route_add_output.txt; then
+        bashio::log.info "✅ Route added successfully"
         return 0
     else
-        return 1
+        # Check if it failed because route already exists
+        if grep -q "File exists" /tmp/route_add_output.txt; then
+            bashio::log.info "Route already exists - this is OK"
+            return 0
+        else
+            bashio::log.error "Failed to add route: $(cat /tmp/route_add_output.txt)"
+            return 1
+        fi
     fi
 }
 
