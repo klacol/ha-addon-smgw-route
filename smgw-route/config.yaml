@@ -1,5 +1,5 @@
 name: "SMGW Route Manager"
-version: "1.0.7"
+version: "1.0.8"
 slug: smgw-route
 description: "Automatische Konfiguration der statischen Route zum SMGW über GL.iNet Router"
 url: "https://github.com/klacol/ha-addon-smgw-route"
