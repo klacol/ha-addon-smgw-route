@@ -83,7 +83,9 @@ while true; do
         
         bashio::log.info "Testing connectivity to SMGW ${SMGW_IP}..."
         SMGW_PING_OUTPUT=$(ping -c 1 -W 2 "${SMGW_IP}" 2>&1)
-        if [ $? -eq 0 ]; then
+        SMGW_PING_RESULT=$?
+        
+        if [ ${SMGW_PING_RESULT} -eq 0 ]; then
             bashio::log.info "✅ SMGW ${SMGW_IP} is reachable"
             bashio::log.debug "Ping result: ${SMGW_PING_OUTPUT}"
         else
@@ -92,13 +94,10 @@ while true; do
             
             # Additional debug information when SMGW is not reachable
             bashio::log.debug "Checking route to SMGW network:"
-            bashio::log.debug "$(ip route get ${SMGW_IP} 2>&1)"
+            ip route get "${SMGW_IP}" 2>&1 | head -3 | while read line; do bashio::log.debug "  $line"; done || true
             
-            bashio::log.debug "ARP table:"
-            bashio::log.debug "$(ip neigh show)"
-            
-            bashio::log.debug "Network interfaces:"
-            bashio::log.debug "$(ip addr show)"
+            bashio::log.debug "ARP table (relevant entries):"
+            ip neigh show | grep -E "${GATEWAY_IP}|${SMGW_IP}" | while read line; do bashio::log.debug "  $line"; done || true
         fi
         
         date +%s > /tmp/last_ping
