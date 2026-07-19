@@ -10,6 +10,11 @@ bashio::log.info "Starting SMGW Route Manager..."
 bashio::log.info "SMGW Network: ${SMGW_NETWORK}"
 bashio::log.info "Gateway IP: ${GATEWAY_IP}"
 bashio::log.info "SMGW IP: ${SMGW_IP}"
+bashio::log.info "Log Level: ${LOG_LEVEL}"
+
+# Show initial routing table for troubleshooting
+bashio::log.info "Initial routing table:"
+ip route | while read line; do bashio::log.info "  $line"; done
 
 # Function to add route
 add_route() {
