@@ -112,6 +112,7 @@ Vor dem Start des Addons musst du die Netzwerk-Parameter anpassen:
 ```yaml
 smgw_network: "10.11.120.0/24"  # Netzwerk des SMGW hinter dem Router
 gateway_ip: "192.168.0.119"      # IP des GL.iNet Routers im HA-Netzwerk
+smgw_ip: "10.11.120.2"           # IP-Adresse des SMGW (für Ping-Test)
 log_level: info
 ```
 
@@ -124,6 +125,7 @@ log_level: info
    - ✅ "Route added successfully"
    - ✅ "Route is active and working!"
    - ✅ "Gateway is reachable"
+   - ✅ "SMGW is reachable"
 
 ## 🎯 Wie funktioniert es?
 
@@ -136,7 +138,7 @@ Das Addon führt beim Start folgende Schritte aus:
    ```
 3. **Reaktiviert die Verbindung**, damit die Route sofort aktiv ist
 4. **Verifiziert** die Route mit `ip route`
-5. **Testet** die Verbindung zum Gateway
+5. **Testet** die Verbindung zum Gateway und zum SMGW
 
 Die Route bleibt **permanent** erhalten, auch nach Reboots!
 
@@ -146,10 +148,7 @@ Die Route bleibt **permanent** erhalten, auch nach Reboots!
 |-----------|----------|--------------|
 | `smgw_network` | `10.11.120.0/24` | Das Netzwerk hinter dem GL.iNet Router, in dem sich das SMGW befindet |
 | `gateway_ip` | `192.168.0.119` | Die IP-Adresse des GL.iNet Routers im Home Assistant Netzwerk |
-| `log_level` | `info` | Log-Level: `debug`, `info`, `warning`, `error` |
-
-## 🔍 Troubleshooting
-
+| `smgw_ip` | `10.11.120.2` | Die IP-Adresse des SMGW (für Konnektivitäts-Test) |
 ### Addon startet nicht
 
 Prüfe das Log auf Fehler:

@@ -50,12 +50,14 @@ Das Setup umfasst:
 ```yaml
 smgw_network: "10.11.120.0/24"     # Netzwerk hinter dem GL.iNet Router
 gateway_ip: "192.168.0.119"        # WAN-IP des GL.iNet Routers
+smgw_ip: "10.11.120.2"             # IP-Adresse des SMGW (für Ping-Test)
 log_level: info
 ```
 
 **Ihre Werte aus der GL.iNet-Anleitung:**
 - `gateway_ip`: Die WAN-IP, die Sie in Phase 2.5 notiert haben
 - `smgw_network`: Normalerweise `10.11.120.0/24` (Standard bei SMGW)
+- `smgw_ip`: Die IP-Adresse Ihres SMGW (normalerweise `10.11.120.2`)
 
 #### 4. Starten und prüfen
 
@@ -65,11 +67,18 @@ log_level: info
    ```
    [INFO] Route added successfully
    [INFO] ✅ Route is active and working!
+   [INFO] Testing connectivity to gateway 192.168.0.119...
    [INFO] ✅ Gateway 192.168.0.119 is reachable
-   [INFO] SMGW Route Manager configured successfully
+   [INFO] Testing connectivity to SMGW 10.11.120.2...
+   [INFO] ✅ SMGW 10.11.120.2 is reachable
    ```
 
 **✅ Fertig!** Das Addon läuft und die Route ist aktiv.
+
+**⚠️ Wenn der SMGW-Ping fehlschlägt:**
+- Prüfen Sie, ob der GL.iNet Router läuft (LED leuchtet)
+- Prüfen Sie die Firewall-Regel "wan → lan" im GL.iNet
+- Prüfen Sie das Ethernet-Kabel zwischen GL.iNet und SMGW
 
 ### Phase 3: SMGW-Integration hinzufügen (2 Min)
 

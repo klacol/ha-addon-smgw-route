@@ -3,11 +3,13 @@
 # Read configuration
 SMGW_NETWORK=$(bashio::config 'smgw_network')
 GATEWAY_IP=$(bashio::config 'gateway_ip')
+SMGW_IP=$(bashio::config 'smgw_ip')
 LOG_LEVEL=$(bashio::config 'log_level')
 
 bashio::log.info "Starting SMGW Route Manager..."
 bashio::log.info "SMGW Network: ${SMGW_NETWORK}"
 bashio::log.info "Gateway IP: ${GATEWAY_IP}"
+bashio::log.info "SMGW IP: ${SMGW_IP}"
 
 # Function to add route
 add_route() {
@@ -50,7 +52,7 @@ while true; do
         bashio::log.debug "✅ Route is active: $(ip route | grep "${SMGW_NETWORK}")"
     fi
     
-    # Test connectivity to gateway (only every 5 minutes to reduce log spam)
+    # Test connectivity to gateway and SMGW (only every 5 minutes to reduce log spam)
     if [ ! -f /tmp/last_ping ] || [ $(($(date +%s) - $(cat /tmp/last_ping))) -gt 300 ]; then
         bashio::log.info "Testing connectivity to gateway ${GATEWAY_IP}..."
         if ping -c 1 -W 2 "${GATEWAY_IP}" > /dev/null 2>&1; then
@@ -58,6 +60,14 @@ while true; do
         else
             bashio::log.warning "⚠️ Gateway ${GATEWAY_IP} is not reachable"
         fi
+        
+        bashio::log.info "Testing connectivity to SMGW ${SMGW_IP}..."
+        if ping -c 1 -W 2 "${SMGW_IP}" > /dev/null 2>&1; then
+            bashio::log.info "✅ SMGW ${SMGW_IP} is reachable"
+        else
+            bashio::log.warning "⚠️ SMGW ${SMGW_IP} is not reachable - check GL.iNet connection!"
+        fi
+        
         date +%s > /tmp/last_ping
     fi
     

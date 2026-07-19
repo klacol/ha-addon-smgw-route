@@ -296,9 +296,6 @@ GL.iNet WAN-IP: _______________ (z.B. 192.168.0.119)
    Output:  accept
    Forward: accept
    
-   Masquerading: □ NICHT aktiviert (leer lassen)
-   MSS clamping: □ NICHT aktiviert (leer lassen)
-   
    Covered networks: lan
    ```
 
@@ -312,23 +309,24 @@ GL.iNet WAN-IP: _______________ (z.B. 192.168.0.119)
    ```
 
    **⚠️ WICHTIG:** 
-   - **KEINE** Häkchen bei Masquerading oder MSS clamping setzen!
-   - Diese Einstellungen gehören zur WAN-Zone, nicht zur LAN-Zone
-   - Die Forward-Regel "Allow forward to destination zones: WAN" ist entscheidend
+   - Die Forward-Regel "Allow forward to destination zones: WAN" ist entscheidend für den SMGW-Zugriff
 
-5. **Prüfen, dass die WAN-Zone Masquerading aktiviert hat:**
+5. **WAN-Zone für eingehenden Traffic konfigurieren:**
    - Gehen Sie zurück zur Firewall-Übersicht
-   - In der Tabelle sollte bei der Zone **"wan"** ein Häkchen bei "Masquerading" sichtbar sein
-   - Falls nicht: Zone "wan" bearbeiten und "Masquerading" aktivieren
+   - Klicken Sie auf **"Edit"** bei der Zone **"wan"**
+   - Scrollen Sie zu **"Allow forward to destination zones:"**
+   - Aktivieren Sie: **"lan"** ✅
+   - Dies erlaubt Traffic vom Heimnetzwerk zum SMGW-Netzwerk
 
 6. **"Save & Apply"** klicken
    - Warten Sie ca. 10-20 Sekunden
    - Die Einstellungen werden übernommen
 
 **Was macht das?**
-- **Forward to destination zones (WAN):** Erlaubt Weiterleitung von LAN → WAN (wichtig für SMGW-Zugriff!)
-- **Masquerading auf WAN:** Ermöglicht NAT (Network Address Translation) für ausgehenden Traffic
+- **LAN → WAN Forward:** Erlaubt Weiterleitung von LAN (SMGW) → WAN (Heimnetzwerk) für ausgehenden Traffic
+- **WAN → LAN Forward:** Erlaubt Weiterleitung von WAN (Heimnetzwerk) → LAN (SMGW) für eingehenden Traffic von Home Assistant
 - **accept/accept/accept auf LAN:** Erlaubt alle Verbindungen innerhalb der LAN-Zone
+- **Reines Routing:** Keine Adressübersetzung, alle Pakete behalten ihre Original-IP-Adressen
 
 **✓ Checkpoint:** Firewall ist konfiguriert!
 
