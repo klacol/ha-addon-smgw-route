@@ -1,0 +1,24 @@
+name: "SMGW Route Manager"
+version: "1.0.0"
+slug: smgw-route
+description: "Automatische Konfiguration der statischen Route zum SMGW über GL.iNet Router"
+url: "https://github.com/klacol/ha-addon-smgw-route"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+init: false
+host_network: true
+privileged:
+  - SYS_ADMIN
+  - NET_ADMIN
+options:
+  smgw_network: "10.11.120.0/24"
+  gateway_ip: "192.168.0.119"
+  log_level: "info"
+schema:
+  smgw_network: str
+  gateway_ip: str
+  log_level: list(debug|info|warning|error)?
