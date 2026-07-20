@@ -4,6 +4,35 @@
 
 Das SMGW (z.B. Theben Smart Energy Conexa) verwendet ein SSL-Zertifikat mit einem **Subject Alternative Name (SAN)**, der als Hostname im Zertifikat hinterlegt ist. Um die SSL-Zertifikatsvalidierung erfolgreich durchzuführen, muss dieser Hostname aufgelöst werden können.
 
+## ✨ Neu: Automatische DNS-Konfiguration (empfohlen!)
+
+**Ab Version 1.1.0** kann das SMGW Route Manager Addon die DNS-Konfiguration automatisch vornehmen!
+
+### Schnellstart - Automatische Konfiguration
+
+1. **Hostname aus SMGW-Zertifikat ermitteln** (siehe unten)
+2. **Addon-Konfiguration erweitern:**
+   ```yaml
+   smgw_hostname: "ethe0300186023.sm"  # Ihr SMGW-Hostname
+   dns_enabled: true                    # DNS-Funktion aktivieren
+   ```
+3. **Addon neu starten**
+4. **Fertig!** ✅
+
+**Vorteile der automatischen Konfiguration:**
+- ✅ Keine manuelle Hosts-Datei-Bearbeitung
+- ✅ Funktioniert für alle Geräte, die über Home Assistant auf das SMGW zugreifen
+- ✅ Automatische Wartung und Wiederherstellung des DNS-Eintrags
+- ✅ SSL-Zertifikatsvalidierung ohne Warnungen
+
+→ **Das ist die empfohlene Methode!**
+
+---
+
+## 📋 Alternative: Manuelle Konfiguration
+
+Wenn Sie die DNS-Konfiguration nicht über das Addon vornehmen möchten, können Sie sie auch manuell einrichten.
+
 ## 📋 Ihre SMGW-Daten
 
 Basierend auf dem Zertifikat des Theben Conexa SMGW:
@@ -34,9 +63,22 @@ Basierend auf dem Zertifikat des Theben Conexa SMGW:
 
 ## 🔧 Konfigurationsmöglichkeiten
 
-Sie haben zwei Möglichkeiten, den Hostnamen aufzulösen:
+Sie haben drei Möglichkeiten, den Hostnamen aufzulösen:
 
-### Option 1: Windows Hosts-Datei (empfohlen für einzelne PCs)
+### Option 1: SMGW Route Manager Addon (✨ NEU - empfohlen!)
+
+**Vorteile:**
+- ✅ Vollständig automatisch
+- ✅ Keine manuelle Konfiguration nötig
+- ✅ Automatische Wartung des DNS-Eintrags
+- ✅ Funktioniert für alle Geräte über Home Assistant
+
+**Nachteile:**
+- ❌ Erfordert Addon Version 1.1.0 oder höher
+
+→ **[Anleitung: Automatische Konfiguration](#-neu-automatische-dns-konfiguration-empfohlen)**
+
+### Option 2: Windows Hosts-Datei (für einzelne PCs)
 
 **Vorteile:**
 - ✅ Schnell und einfach
@@ -49,7 +91,7 @@ Sie haben zwei Möglichkeiten, den Hostnamen aufzulösen:
 
 → **[Anleitung: Windows Hosts-Datei](#windows-hosts-datei)**
 
-### Option 2: DNS-Server (empfohlen für Netzwerk)
+### Option 3: DNS-Server (für Netzwerk)
 
 **Vorteile:**
 - ✅ Zentrale Konfiguration

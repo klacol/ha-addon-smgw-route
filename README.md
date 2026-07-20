@@ -28,7 +28,8 @@ Konfigurieren Sie DNS-Einträge für den SMGW-Hostnamen, um SSL-Zertifikatswarnu
 - ✅ **Keine manuelle Netzwerk-Konfiguration** auf Clients nötig
 - ✅ **Detaillierte Anleitung** für alle Schritte
 - ✅ **Funktioniert out-of-the-box** mit PPC SMGW Integration
-- ✅ **Optionale DNS-Konfiguration** für SSL-Zertifikatsvalidierung ohne Warnungen
+- ✅ **✨ Neu: Automatische DNS-Konfiguration** für SSL-Zertifikatsvalidierung ohne Warnungen
+- ✅ **✨ Neu: Hostname-basierter Zugriff** auf das SMGW (z.B. `https://ethe0300186023.sm`)
 
 ## 🎯 Für wen ist das?
 
@@ -144,10 +145,30 @@ Vor dem Start des Addons musst du die Netzwerk-Parameter anpassen:
 smgw_network: "10.11.120.0/24"  # Netzwerk des SMGW hinter dem Router
 gateway_ip: "192.168.0.119"      # IP des GL.iNet Routers im HA-Netzwerk
 smgw_ip: "10.11.120.2"           # IP-Adresse des SMGW (für Ping-Test)
+smgw_hostname: ""                # Hostname des SMGW (z.B. "ethe0300186023.sm")
+dns_enabled: false               # Automatische DNS-Konfiguration aktivieren
 log_level: info
 ```
 
 **Wichtig:** Passe diese Werte an deine Netzwerk-Konfiguration an!
+
+#### ✨ Neu: Automatische DNS-Konfiguration
+
+Mit Version 1.1.0 kann das Addon **automatisch einen DNS-Eintrag** für Ihr SMGW setzen:
+
+```yaml
+smgw_hostname: "ethe0300186023.sm"  # Ihr SMGW-Hostname aus dem Zertifikat
+dns_enabled: true                    # DNS-Konfiguration aktivieren
+```
+
+**Vorteile:**
+- ✅ Keine manuelle Hosts-Datei-Konfiguration mehr nötig
+- ✅ SSL-Zertifikatsvalidierung funktioniert ohne Warnungen
+- ✅ Zugriff über `https://ethe0300186023.sm` statt `https://10.11.120.2`
+- ✅ Automatische Wartung des DNS-Eintrags
+
+**So finden Sie Ihren SMGW-Hostnamen:**
+→ **[DNS-Setup Anleitung](DNS-SETUP.md)** für Details zum Zertifikat-SAN-Namen
 
 ### Schritt 4: Starten
 
@@ -180,6 +201,25 @@ Die Route bleibt **permanent** erhalten, auch nach Reboots!
 | `smgw_network` | `10.11.120.0/24` | Das Netzwerk hinter dem GL.iNet Router, in dem sich das SMGW befindet |
 | `gateway_ip` | `192.168.0.119` | Die IP-Adresse des GL.iNet Routers im Home Assistant Netzwerk |
 | `smgw_ip` | `10.11.120.2` | Die IP-Adresse des SMGW (für Konnektivitäts-Test) |
+| `smgw_hostname` | `""` | ✨ **Neu:** Hostname des SMGW aus dem SSL-Zertifikat (z.B. `ethe0300186023.sm`) |
+| `dns_enabled` | `false` | ✨ **Neu:** Automatische DNS-Konfiguration aktivieren (setzt `/etc/hosts` Eintrag) |
+| `log_level` | `info` | Log-Level: `debug`, `info`, `warning`, `error` |
+
+### ✨ DNS-Konfiguration (neu in v1.1.0)
+
+Wenn Sie `dns_enabled: true` setzen und einen `smgw_hostname` angeben:
+- Das Addon setzt automatisch einen Eintrag in `/etc/hosts`
+- SSL-Zertifikatsvalidierung funktioniert ohne Warnungen
+- Zugriff über Hostname statt IP möglich
+- Der DNS-Eintrag wird kontinuierlich überwacht und bei Bedarf wiederhergestellt
+
+**Beispiel:**
+```yaml
+smgw_hostname: "ethe0300186023.sm"
+dns_enabled: true
+```
+
+→ Dann können Sie `https://ethe0300186023.sm` statt `https://10.11.120.2` verwenden!
 ### Addon startet nicht
 
 Prüfe das Log auf Fehler:
