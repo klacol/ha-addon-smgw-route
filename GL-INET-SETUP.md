@@ -30,33 +30,66 @@ GL.iNet Router als Bridge zwischen Heimnetzwerk und SMGW einrichten.
 
 ---
 
-## 🔌 Physische Topologie
+## � Technischer Hintergrund (BSI TR-03109-1)
+
+### Netzwerk-Terminologie
+Das SMGW hat gemäß **BSI TR-03109-1** (Technische Richtlinie für Smart Meter Gateways) drei getrennte Netzwerke:
+
+- **WAN** (Wide Area Network): Internet-Verbindung des SMGW zum Gateway-Administrator (GWA) - meist über Mobilfunk
+- **HAN** (Home Area Network): Lokale Schnittstelle für Heimnetzwerk-Zugriff (hier greifen wir zu!)
+- **LMN** (Local Metrological Network): Verbindung zu Zählern/Sensoren
+
+**⚠️ Wichtig zu verstehen:**
+- Der **SMGW-HAN-Port** ist die Schnittstelle für lokale Nutzer (z.B. Sie mit Home Assistant)
+- Der **GL.iNet "WAN-Port"** verbindet sich mit Ihrem Heimnetzwerk (nicht mit SMGW-WAN!)
+- Der **GL.iNet "LAN-Port"** verbindet sich mit dem **SMGW-HAN-Port**
+- Das SMGW hat seinen eigenen Internet-Zugang (SMGW-WAN) - unabhängig von Ihrem Setup!
+
+### Sicherheitsaspekte
+Gemäß TR-03109-1:
+- ✅ Das SMGW fungiert als Firewall und trennt die Netze
+- ✅ Das SMGW akzeptiert **keine** eingehenden Verbindungen aus dem Internet
+- ✅ Lokaler Zugriff auf den HAN-Port ist vorgesehen und sicher
+- ✅ IPv4 ist ausreichend (IPv6 ist optional)
+
+**Ihr GL.iNet übernimmt die Rolle der physischen Netzwerktrennung zwischen Ihrem Heimnetzwerk und dem SMGW-HAN-Netzwerk.**
+
+→ **[Ausführliche technische Analyse: TR-03109-1-ERKENNTNISSE.md](TR-03109-1-ERKENNTNISSE.md)**
+
+---
+
+## �🔌 Physische Topologie
 
 ```
 [Fritzbox/Heimnetzwerk-Router im Haus]
-            |
+            | Heimnetzwerk (192.168.0.x)
             | Ethernet-Kabel (10-30m)
             ↓
-    ╔═══════════════════════════════╗
-    ║  Zählerschrank                ║
-    ║                               ║
-    ║  ┌──[WAN-Port]──────────────┐ ║
-    ║  │  GL.iNet MT300N-V2       │ ║
-    ║  │  (10.11.120.1)           │ ║
-    ║  └──[LAN-Port]──────────────┘ ║
-    ║            |                  ║
-    ║            | Kurzes Kabel     ║
-    ║            ↓                  ║
-    ║  ┌───[HAN-Port]─────────────┐ ║
-    ║  │  SMGW                    │ ║
-    ║  │  (10.11.120.2)           │ ║
-    ║  └──────────────────────────┘ ║
-    ╚═══════════════════════════════╝
+    ╔═══════════════════════════════════════════════╗
+    ║  Zählerschrank                                ║
+    ║                                               ║
+    ║  ┌──[WAN-Port]─────────────────────────────┐ ║
+    ║  │  GL.iNet MT300N-V2                      │ ║
+    ║  │  WAN: z.B. 192.168.0.119 (Heimnetzwerk) │ ║
+    ║  │  LAN: 10.11.120.1 (SMGW-HAN-Netz)      │ ║
+    ║  └──[LAN-Port]─────────────────────────────┘ ║
+    ║            | 10.11.120.0/24 Netzwerk          ║
+    ║            | Kurzes Kabel                     ║
+    ║            ↓                                   ║
+    ║  ┌───[HAN-Port]─────────────────────────────┐ ║
+    ║  │  SMGW (Smart Meter Gateway)             │ ║
+    ║  │  HAN: 10.11.120.2                       │ ║
+    ║  │  WAN: Mobilfunk → GWA (unabhängig!)     │ ║
+    ║  │  LMN: Zähler/Sensoren                   │ ║
+    ║  └─────────────────────────────────────────┘ ║
+    ╚═══════════════════════════════════════════════╝
 ```
 
 **WICHTIG:** 
-- **WAN-Port** → Heimnetzwerk
-- **LAN-Port** → SMGW
+- **GL.iNet WAN-Port** → Verbindung zu Ihrem Heimnetzwerk (z.B. 192.168.0.x)
+- **GL.iNet LAN-Port** → Verbindung zum SMGW-HAN-Port (10.11.120.x)
+- **SMGW-HAN-Port** → Lokale Schnittstelle für Heimnetzwerk-Zugriff
+- **SMGW-WAN** → Eigene Internet-Verbindung (Mobilfunk) zum GWA - **nicht über Ihr Heimnetzwerk!**
 
 ---
 
@@ -648,6 +681,38 @@ sensor:
 ```
 
 Die Route sorgt dafür, dass Home Assistant das SMGW über den GL.iNet Router erreicht!
+
+### 6.2 SSL-Zertifikatsvalidierung ohne Warnungen (optional)
+
+**Problem:** Das SMGW verwendet ein SSL-Zertifikat mit einem spezifischen Hostnamen (SAN). Bei Zugriff über die IP-Adresse erscheint eine Zertifikatswarnung.
+
+**Lösung:** DNS-Eintrag für den SMGW-Hostnamen konfigurieren.
+
+**Beispiel:** Ihr SMGW hat den Hostnamen `ethe0300186023.sm` im Zertifikat.
+
+#### Option A: Nur für Home Assistant (einfach)
+
+Fügen Sie einen Eintrag zur `/etc/hosts` in Home Assistant OS hinzu:
+
+```bash
+# Via SSH oder Terminal
+echo "10.11.120.2    ethe0300186023.sm" >> /etc/hosts
+```
+
+**Dann in der Integration verwenden:**
+```yaml
+host: "ethe0300186023.sm"  # statt 10.11.120.2
+```
+
+#### Option B: Netzwerkweite Lösung (empfohlen)
+
+Konfigurieren Sie DNS-Einträge für alle Geräte:
+
+→ **[Vollständige DNS-Setup Anleitung](DNS-SETUP.md)** mit allen Optionen:
+- Windows Hosts-Datei
+- Router DNS-Konfiguration
+- GL.iNet als DNS-Server
+- Pi-hole Integration
 
 **✓ FERTIG!** Ihr SMGW ist in Home Assistant integriert! 🎉
 

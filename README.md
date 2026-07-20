@@ -14,6 +14,11 @@ Schritt-für-Schritt-Anleitung zur Einrichtung des GL.iNet MT300N-V2 Routers als
 ### 2. Home Assistant Addon
 Das **SMGW Route Manager Addon** fügt automatisch die benötigte statische Route in Home Assistant OS hinzu - ohne manuelle Konfiguration!
 
+### 3. DNS-Setup Anleitung (neu!)
+**→ [DNS-Setup für SSL-Zertifikatsvalidierung](DNS-SETUP.md)**
+
+Konfigurieren Sie DNS-Einträge für den SMGW-Hostnamen, um SSL-Zertifikatswarnungen zu vermeiden.
+
 ## 🚀 Features
 
 - ✅ **Komplette Hardware-Lösung** - GL.iNet Router als Bridge zum SMGW
@@ -23,6 +28,7 @@ Das **SMGW Route Manager Addon** fügt automatisch die benötigte statische Rout
 - ✅ **Keine manuelle Netzwerk-Konfiguration** auf Clients nötig
 - ✅ **Detaillierte Anleitung** für alle Schritte
 - ✅ **Funktioniert out-of-the-box** mit PPC SMGW Integration
+- ✅ **Optionale DNS-Konfiguration** für SSL-Zertifikatsvalidierung ohne Warnungen
 
 ## 🎯 Für wen ist das?
 
@@ -46,6 +52,11 @@ Das **SMGW Route Manager Addon** fügt automatisch die benötigte statische Rout
 - SMGW im privaten Netzwerk des GL.iNet (z.B. 10.11.120.2)
 - GL.iNet erreichbar im Home Assistant Netzwerk (z.B. 192.168.0.119)
 
+### Optional: DNS für SSL-Zertifikatsvalidierung
+- DNS-Eintrag für SMGW-Hostname (z.B. `ethe0300186023.sm → 10.11.120.2`)
+- Vermeidet SSL-Zertifikatswarnungen
+- → **[DNS-Setup Anleitung](DNS-SETUP.md)** für Details
+
 ## 🏗️ Gesamtlösung - Architektur
 
 ```
@@ -54,23 +65,43 @@ Das **SMGW Route Manager Addon** fügt automatisch die benötigte statische Rout
 │  + SMGW Route Manager Addon     │
 │    (automatische Route)         │
 └────────────┬────────────────────┘
-             │ Heimnetzwerk
-             │ (192.168.0.x)
+             │ Heimnetzwerk (192.168.0.x)
+             │ Route: 10.11.120.0/24 via 192.168.0.119
              ↓
-┌────────────────────────────────┐
-│  GL.iNet MT300N-V2 Router      │
-│  WAN: 192.168.0.119            │  ← Im Heimnetzwerk
-│  LAN: 10.11.120.1              │  ← SMGW-Netzwerk
-└────────────┬───────────────────┘
-             │ Ethernet
+┌────────────────────────────────────────────┐
+│  GL.iNet MT300N-V2 Router                  │
+│  WAN: 192.168.0.119 (Heimnetzwerk)         │
+│  LAN: 10.11.120.1 (SMGW-HAN-Netz)          │
+│  Funktion: Netzwerk-Bridge + Firewall      │
+└────────────┬───────────────────────────────┘
+             │ 10.11.120.0/24 Netzwerk
+             │ Ethernet zum SMGW-HAN-Port
              ↓
-┌────────────────────────────────┐
-│  SMGW (Smart Meter Gateway)    │
-│  IP: 10.11.120.2               │
-└────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│  SMGW (Smart Meter Gateway)                │
+│  HAN: 10.11.120.2 (lokaler Zugriff)        │
+│  WAN: Mobilfunk → GWA (unabhängig!)        │
+│  LMN: Zähler/Sensoren                      │
+└────────────────────────────────────────────┘
 ```
 
-## 🚀 Quick Start
+## � Technische Dokumentation
+
+### BSI TR-03109-1 Konformität
+Diese Lösung entspricht den Anforderungen der **BSI TR-03109-1** (Technische Richtlinie für Smart Meter Gateways):
+- ✅ Netzwerktrennung zwischen Heimnetzwerk und SMGW-HAN
+- ✅ IPv4-Unterstützung (Pflicht)
+- ✅ Firewall-Funktion durch GL.iNet
+- ✅ Sicherer lokaler Zugriff auf SMGW-HAN-Port
+
+**→ [Ausführliche technische Analyse: TR-03109-1-ERKENNTNISSE.md](TR-03109-1-ERKENNTNISSE.md)**
+
+**Wichtig zu verstehen:**
+- Der **SMGW-HAN-Port** ist die lokale Schnittstelle (hier greifen wir zu)
+- Das **SMGW hat einen eigenen WAN-Zugang** (Mobilfunk) zum Gateway-Administrator
+- Der **GL.iNet trennt physisch** Ihr Heimnetzwerk vom SMGW-HAN-Netzwerk
+
+## �🚀 Quick Start
 
 ### Schritt 1: GL.iNet Router einrichten
 Folgen Sie der **[detaillierten GL.iNet-Anleitung](GL-INET-SETUP.md)** für:
@@ -179,6 +210,18 @@ Nach Installation des Addons kannst du die [PPC SMGW Integration](https://github
 
 Die Route sorgt dafür, dass Home Assistant das SMGW über den GL.iNet Router erreicht!
 
+### SSL-Zertifikatsvalidierung ohne Warnungen (optional)
+
+Um SSL-Zertifikatswarnungen zu vermeiden, können Sie statt der IP-Adresse den Hostnamen des SMGW verwenden:
+
+```yaml
+# In der Integration-Konfiguration:
+Host: ethe0300186023.sm    # statt 10.11.120.2
+```
+
+**Voraussetzung:** DNS-Eintrag muss konfiguriert sein.  
+→ **[Vollständige DNS-Setup Anleitung](DNS-SETUP.md)**
+
 ## 🛠️ Entwicklung
 
 ### Repository-Struktur
@@ -215,6 +258,14 @@ Issues und Pull Requests sind willkommen!
 ## 📧 Support
 
 Bei Fragen oder Problemen öffne ein [GitHub Issue](https://github.com/klacol/ha-addon-smgw-route/issues).
+
+## 📖 Weiterführende Dokumentation
+
+- **[GL.iNet Setup](GL-INET-SETUP.md)** - Vollständige Anleitung zur Router-Konfiguration
+- **[Installation](INSTALLATION.md)** - Schritt-für-Schritt Gesamtinstallation
+- **[Windows Setup](WINDOWS-SETUP.md)** - Route für Windows-PCs einrichten
+- **[DNS-Setup](DNS-SETUP.md)** - SSL-Zertifikatsvalidierung ohne Warnungen
+- **[TR-03109-1 Erkenntnisse](TR-03109-1-ERKENNTNISSE.md)** - Technische Details zur BSI-Richtlinie
 
 ---
 

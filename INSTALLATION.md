@@ -96,6 +96,19 @@ Installieren Sie die [PPC SMGW Integration](https://github.com/klacol/ha-ppc-smg
    ```
 4. **Absenden** klicken
 
+**💡 Tipp: SSL-Zertifikat ohne Warnung (optional)**
+
+Das SMGW verwendet ein SSL-Zertifikat mit einem spezifischen Hostnamen. Um SSL-Zertifikatswarnungen zu vermeiden, können Sie statt der IP-Adresse den Hostnamen verwenden:
+
+```
+Host: ethe0300186023.sm    (statt 10.11.120.2)
+```
+
+**⚠️ WICHTIG:** Ersetzen Sie `ethe0300186023.sm` durch den tatsächlichen Hostnamen aus Ihrem SMGW-Zertifikat!
+
+**Voraussetzung:** DNS-Eintrag muss konfiguriert sein.  
+→ **[DNS-Setup Anleitung](DNS-SETUP.md)** für Details
+
 **✅ Ergebnis:** SMGW-Sensoren erscheinen in Home Assistant!
 
 ---

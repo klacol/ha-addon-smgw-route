@@ -7,6 +7,7 @@
         "Aengenvoort",
         "atlassian",
         "CAFM",
+        "Conexa",
         "Dockingstation",
         "documentclass",
         "etask",
@@ -24,6 +25,7 @@
         "scrartcl",
         "Sicherheitsaudit",
         "skripts",
+        "SMGW",
         "Supportarbeiten",
         "venv",
         "versioniert",
@@ -31,6 +33,7 @@
         "Wassenich",
         "Webinare",
         "xelatex",
+        "Zertifikatsvalidierung",
         "Zschieschang"
     ],
     "ignoreWords": [],
