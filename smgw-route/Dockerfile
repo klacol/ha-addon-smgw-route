@@ -7,7 +7,8 @@ RUN apk add --no-cache \
     jq \
     curl \
     iproute2 \
-    iputils
+    iputils \
+    util-linux
 
 # Copy run script
 COPY run.sh /

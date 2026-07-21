@@ -70,20 +70,49 @@ add_dns_entry_host() {
         return 1
     fi
     
+    # Debug: Show available mount points
+    bashio::log.debug "Available mount points:"
+    mount | grep -E "(host|root|etc)" | while read line; do bashio::log.debug "  $line"; done || true
+    
     # Try different paths where host /etc/hosts might be accessible
     local host_etc_hosts=""
-    for path in "/host/etc/hosts" "/mnt/data/supervisor/etc/hosts" "/rootfs/etc/hosts"; do
+    for path in "/host/etc/hosts" "/mnt/data/supervisor/etc/hosts" "/rootfs/etc/hosts" "/mnt/host/etc/hosts"; do
         if [ -f "${path}" ]; then
             host_etc_hosts="${path}"
+            bashio::log.info "Found host /etc/hosts at: ${path}"
             break
         fi
     done
     
+    # If no direct path found, try using nsenter to access host namespace
     if [ -z "${host_etc_hosts}" ]; then
-        bashio::log.warning "Host /etc/hosts nicht gefunden, verwende lokale /etc/hosts"
-        return 1
+        bashio::log.info "Direct path not found, trying nsenter to host namespace..."
+        
+        # Find host PID 1 to enter its namespace
+        if nsenter -t 1 -m -u -n -i test -f /etc/hosts 2>/dev/null; then
+            bashio::log.info "Using nsenter to modify host /etc/hosts"
+            
+            # Remove existing entries
+            nsenter -t 1 -m -u -n -i sed -i "/${SMGW_HOSTNAME}/d" /etc/hosts 2>/dev/null || true
+            
+            # Add new entry
+            nsenter -t 1 -m -u -n -i sh -c "echo '${SMGW_IP}    ${SMGW_HOSTNAME}  # SMGW Route Manager' >> /etc/hosts"
+            
+            # Verify
+            if nsenter -t 1 -m -u -n -i grep -q "${SMGW_IP}.*${SMGW_HOSTNAME}" /etc/hosts 2>/dev/null; then
+                bashio::log.info "✅ DNS entry added to host /etc/hosts via nsenter successfully"
+                return 0
+            else
+                bashio::log.error "Failed to verify DNS entry via nsenter"
+                return 1
+            fi
+        else
+            bashio::log.warning "Host /etc/hosts nicht gefunden und nsenter fehlgeschlagen"
+            return 1
+        fi
     fi
     
+    # Direct path found - use it
     bashio::log.info "Adding DNS entry to host ${host_etc_hosts}: ${SMGW_IP} ${SMGW_HOSTNAME}"
     
     # Remove any existing entries for this hostname (avoid duplicates)
@@ -112,14 +141,21 @@ add_dns_entry() {
         return 1
     fi
     
-    # First try host /etc/hosts (preferred method)
-    if add_dns_entry_host; then
-        return 0
+    # First rect paths first
+    for path in "/host/etc/hosts" "/mnt/data/supervisor/etc/hosts" "/rootfs/etc/hosts" "/mnt/host/etc/hosts"; do
+        if [ -f "${path}" ]; then
+            bashio::log.info "Removing DNS entry from ${path} for ${SMGW_HOSTNAME}"
+            sed -i "/${SMGW_HOSTNAME}/d" "${path}" 2>/dev/null || true
+            sed -i "/# SMGW Route Manager/d" "${path}" 2>/dev/null || true
+        fi
+    done
+    
+    # Also try via nsenter
+    if nsenter -t 1 -m -u -n -i test -f /etc/hosts 2>/dev/null; then
+        bashio::log.info "Removing DNS entry from host /etc/hosts via nsenter"
+        nsenter -t 1 -m -u -n -i sed -i "/${SMGW_HOSTNAME}/d" /etc/hosts 2>/dev/null || true
+        nsenter -t 1 -m -u -n -i sed -i "/# SMGW Route Manager/d" /etc/hosts 2>/dev/null || true
     fi
-    
-    # Fallback to local /etc/hosts
-    bashio::log.info "Adding DNS entry to local /etc/hosts: ${SMGW_IP} ${SMGW_HOSTNAME}"
-    
     # Remove any existing entries for this hostname or IP (avoid duplicates)
     sed -i "/${SMGW_HOSTNAME}/d" /etc/hosts 2>/dev/null || true
     
