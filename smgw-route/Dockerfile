@@ -5,6 +5,7 @@ FROM ${BUILD_FROM}
 RUN apk add --no-cache \
     bash \
     jq \
+    curl \
     iproute2 \
     iputils
 

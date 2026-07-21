@@ -63,14 +63,62 @@ check_dns_entry() {
     fi
 }
 
-# Function to add DNS entry to /etc/hosts
+# Function to add DNS entry via Home Assistant host /etc/hosts
+add_dns_entry_host() {
+    if [ -z "${SMGW_HOSTNAME}" ]; then
+        bashio::log.warning "DNS Hostname nicht konfiguriert - überspringe DNS-Eintrag"
+        return 1
+    fi
+    
+    # Try different paths where host /etc/hosts might be accessible
+    local host_etc_hosts=""
+    for path in "/host/etc/hosts" "/mnt/data/supervisor/etc/hosts" "/rootfs/etc/hosts"; do
+        if [ -f "${path}" ]; then
+            host_etc_hosts="${path}"
+            break
+        fi
+    done
+    
+    if [ -z "${host_etc_hosts}" ]; then
+        bashio::log.warning "Host /etc/hosts nicht gefunden, verwende lokale /etc/hosts"
+        return 1
+    fi
+    
+    bashio::log.info "Adding DNS entry to host ${host_etc_hosts}: ${SMGW_IP} ${SMGW_HOSTNAME}"
+    
+    # Remove any existing entries for this hostname (avoid duplicates)
+    sed -i "/${SMGW_HOSTNAME}/d" "${host_etc_hosts}" 2>/dev/null || {
+        bashio::log.warning "Konnte host /etc/hosts nicht bearbeiten (Berechtigung?)"
+        return 1
+    }
+    
+    # Add the new entry
+    echo "${SMGW_IP}    ${SMGW_HOSTNAME}  # SMGW Route Manager" >> "${host_etc_hosts}"
+    
+    # Verify entry was added
+    if grep -q "${SMGW_IP}.*${SMGW_HOSTNAME}" "${host_etc_hosts}" 2>/dev/null; then
+        bashio::log.info "✅ DNS entry added to ${host_etc_hosts} successfully"
+        return 0
+    else
+        bashio::log.error "Failed to add DNS entry to ${host_etc_hosts}"
+        return 1
+    fi
+}
+
+# Function to add DNS entry to /etc/hosts (fallback)
 add_dns_entry() {
     if [ -z "${SMGW_HOSTNAME}" ]; then
         bashio::log.warning "DNS Hostname nicht konfiguriert - überspringe DNS-Eintrag"
         return 1
     fi
     
-    bashio::log.info "Adding DNS entry: ${SMGW_IP} ${SMGW_HOSTNAME}"
+    # First try host /etc/hosts (preferred method)
+    if add_dns_entry_host; then
+        return 0
+    fi
+    
+    # Fallback to local /etc/hosts
+    bashio::log.info "Adding DNS entry to local /etc/hosts: ${SMGW_IP} ${SMGW_HOSTNAME}"
     
     # Remove any existing entries for this hostname or IP (avoid duplicates)
     sed -i "/${SMGW_HOSTNAME}/d" /etc/hosts 2>/dev/null || true
@@ -79,12 +127,28 @@ add_dns_entry() {
     echo "${SMGW_IP}    ${SMGW_HOSTNAME}  # SMGW Route Manager" >> /etc/hosts
     
     if check_dns_entry; then
-        bashio::log.info "✅ DNS entry added successfully"
+        bashio::log.info "✅ DNS entry added to local /etc/hosts"
         return 0
     else
         bashio::log.error "Failed to add DNS entry"
         return 1
     fi
+}
+
+# Function to remove DNS entry from host /etc/hosts
+remove_dns_entry_host() {
+    if [ -z "${SMGW_HOSTNAME}" ]; then
+        return 0
+    fi
+    
+    # Try different paths where host /etc/hosts might be accessible
+    for path in "/host/etc/hosts" "/mnt/data/supervisor/etc/hosts" "/rootfs/etc/hosts"; do
+        if [ -f "${path}" ]; then
+            bashio::log.info "Removing DNS entry from ${path} for ${SMGW_HOSTNAME}"
+            sed -i "/${SMGW_HOSTNAME}/d" "${path}" 2>/dev/null || true
+            sed -i "/# SMGW Route Manager/d" "${path}" 2>/dev/null || true
+        fi
+    done
 }
 
 # Function to remove DNS entry from /etc/hosts
@@ -93,7 +157,11 @@ remove_dns_entry() {
         return 0
     fi
     
-    bashio::log.info "Removing DNS entry for ${SMGW_HOSTNAME}"
+    # Remove from host /etc/hosts
+    remove_dns_entry_host
+    
+    # Remove from local /etc/hosts
+    bashio::log.info "Removing DNS entry from local /etc/hosts for ${SMGW_HOSTNAME}"
     sed -i "/${SMGW_HOSTNAME}/d" /etc/hosts 2>/dev/null || true
     sed -i "/# SMGW Route Manager/d" /etc/hosts 2>/dev/null || true
 }

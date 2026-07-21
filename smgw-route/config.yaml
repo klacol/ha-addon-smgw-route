@@ -11,6 +11,9 @@ arch:
   - i386
 init: false
 host_network: true
+hassio_api: true
+hassio_role: manager
+full_access: true
 privileged:
   - SYS_ADMIN
   - NET_ADMIN

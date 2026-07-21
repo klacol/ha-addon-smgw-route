@@ -21,9 +21,10 @@ Das SMGW (z.B. Theben Smart Energy Conexa) verwendet ein SSL-Zertifikat mit eine
 
 **Vorteile der automatischen Konfiguration:**
 - ✅ Keine manuelle Hosts-Datei-Bearbeitung
-- ✅ Funktioniert für alle Geräte, die über Home Assistant auf das SMGW zugreifen
+- ✅ Funktioniert systemweit für alle Geräte und Container
 - ✅ Automatische Wartung und Wiederherstellung des DNS-Eintrags
 - ✅ SSL-Zertifikatsvalidierung ohne Warnungen
+- ✅ DNS-Auflösung funktioniert auch im Home Assistant OS (SSH Terminal)
 
 → **Das ist die empfohlene Methode!**
 
@@ -186,4 +187,55 @@ ha dns options --servers dns://192.168.0.119
 ```
 
 Dies setzt den GL.iNet als DNS-Server für Home Assistant.
+
+---
+
+## 🧪 DNS-Konfiguration testen
+
+Nach dem Aktivieren der automatischen DNS-Konfiguration im Addon können Sie testen, ob die DNS-Auflösung funktioniert:
+
+### Im Home Assistant SSH Terminal
+
+```bash
+# DNS-Auflösung testen
+ping -c 4 ethe0300186023.sm
+
+# Erwartete Ausgabe:
+# PING ethe0300186023.sm (10.11.120.2) 56(84) bytes of data.
+# 64 bytes from 10.11.120.2: icmp_seq=1 ttl=64 time=1.23 ms
+
+# Alternativ mit getent (zeigt /etc/hosts Einträge)
+getent hosts ethe0300186023.sm
+
+# Erwartete Ausgabe:
+# 10.11.120.2     ethe0300186023.sm
+```
+
+### HTTPS-Zugriff testen
+
+```bash
+# SSL-Zertifikat testen
+curl -v https://ethe0300186023.sm 2>&1 | grep -E "(subject|issuer|CN=)"
+
+# Oder im Browser:
+# https://ethe0300186023.sm
+# ✅ Sollte KEINE Zertifikatswarnung zeigen
+```
+
+### Im Addon-Log überprüfen
+
+**Einstellungen** → **Add-ons** → **SMGW Route Manager** → **Protokoll**-Tab
+
+Erfolgreich sollten Sie sehen:
+```
+✅ DNS entry added to /host/etc/hosts successfully
+✅ DNS-Eintrag erfolgreich gesetzt: ethe0300186023.sm -> 10.11.120.2
+✅ DNS-Auflösung funktioniert: ethe0300186023.sm
+```
+
+Falls nicht:
+```
+⚠️ Host /etc/hosts nicht gefunden, verwende lokale /etc/hosts
+```
+→ In diesem Fall funktioniert die DNS-Auflösung nur innerhalb des Addons, nicht systemweit. Verwenden Sie dann die manuelle Konfiguration.
 
