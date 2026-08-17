@@ -209,6 +209,7 @@ Wir konfigurieren hier ALLES am Arbeitsplatz, bevor wir zum Zählerschrank gehen
 3. **Ethernet-Kabel JETZT anschließen:**
    - Nehmen Sie ein **Ethernet-Kabel**
    - Stecken Sie es in den **WAN-Port** des GL.iNet
+   - Als WAN konfiguriert lassen!
    - Andere Ende: In einen **LAN-Port der Fritzbox** oder einem **Switch**
    - Falls Ihre Fritzbox nicht in Reichweite ist: Verwenden Sie ein langes Kabel oder einen Switch
 
@@ -254,12 +255,14 @@ Wir konfigurieren hier ALLES am Arbeitsplatz, bevor wir zum Zählerschrank gehen
    - **Klicken Sie erneut auf "LuCI Admin Panel"**
    - Ein neues Browser-Tab öffnet sich mit dem LuCI-Interface
 
-**✓ Checkpoint:** LuCI ist installiert und funktioniert!
-
-**💡 Warum JETZT?**
-- LuCI braucht Internet zur Installation
-- Nach der LAN-IP-Änderung (später) funktioniert Internet möglicherweise nicht mehr
-- Deshalb: **ZUERST** LuCI installieren, **DANN** weiter konfigurieren!
+7.  Firewall-Regel erstellen für Admin-Zugriff erstellen für den Zugriff vom Heimnetzwerk auf das die Admin-Oberfläche
+   - In LuCI: "Network" → "Firewall" → "Traffic Rules"
+   - Name: Allow-Web-WAN
+     - Protocol: TCP
+     - Source zone: wan
+     - Destination zone: Device (input)
+     - Destination port: 80
+     - Action: accept
 
 ### 2.5 Feste IP-Adresse einrichten
 
@@ -277,7 +280,7 @@ Protokoll:  DHCP
 GL.iNet WAN-IP: _______________ (z.B. 192.168.0.119)
 ```
 
-**DHCP-Reservation in der Fritzbox einrichten:**
+**Alternativ: DHCP-Reservation in der Fritzbox einrichten:**
 
 1. **Neuen Browser-Tab öffnen:**
    - URL: `http://fritz.box` oder `http://192.168.0.1`
@@ -297,230 +300,109 @@ GL.iNet WAN-IP: _______________ (z.B. 192.168.0.119)
    - Der GL.iNet bekommt jetzt bei jedem Neustart die gleiche IP
    - Schließen Sie das Fritzbox-Tab
 
-**✓ Checkpoint:** GL.iNet hat eine **feste** IP-Adresse!
-
 ### 2.6 Firewall mit LuCI konfigurieren
 
-**⚠️ WICHTIG:** Diese Konfiguration muss JETZT erfolgen (solange LuCI funktioniert)!
+**In LuCI (http://192.168.0.119):**
 
-**Diese Einstellung ermöglicht den Zugriff vom Heimnetzwerk auf das die Admin-Oberfläche und das SMGW!**
+1. **Network** → **Firewall** → Tab **"General Settings"**
 
-**Im GL.iNet Interface:**
+2. **Zeile "wan" finden** → **"Edit"** klicken
 
-1. **LuCI Admin Panel öffnen:**
-   - **"Mehr Einstellungen"** → **"LuCI Admin Panel"**
-   - Ein neues Browser-Tab öffnet sich mit dem LuCI-Interface
-   - (Falls Anmeldung gefordert: Nutzen Sie Ihr Admin-Passwort von 2.2)
+3. **Runterscrollen zu "Allow forward to destination zones"**
 
-2. **In LuCI:**
-   - **"Network"** → **"Firewall"**
-   - Sie sehen eine Tabelle mit Firewall-Zonen (wan, lan, etc.)
+4. **Haken setzen bei: "lan"** ✅
 
-3. **Firewall-Zone "lan" bearbeiten:**
-   - Suchen Sie die Zeile mit der Zone **"lan"**
-   - Klicken Sie auf **"Edit"** (Bearbeiten)
+5. **"Save & Apply"** klicken (unten rechts)
 
-4. **Folgende Einstellungen prüfen:**
-   
-   **Grundeinstellungen (sollten bereits korrekt sein):**
-   ```
-   Name:    lan
-   Input:   accept
-   Output:  accept
-   Forward: accept
-   
-   Covered networks: lan
-   ```
+6. **Warten: 10-20 Sekunden**
 
-   **Wichtig - Forward-Regeln:**
-   ```
-   Allow forward to destination zones:
-   - WAN (sollte bereits vorhanden sein)
-   
-   Allow forward from source zones:
-   - unspecified (Standard)
-   ```
+**✓ Checkpoint:** Firewall ist konfiguriert
 
-   **⚠️ WICHTIG:** 
-   - Die Forward-Regel "Allow forward to destination zones: WAN" ist entscheidend für den SMGW-Zugriff
+### 2.6a NAT/Masquerading und Routing für SMGW-Zugriff (KRITISCH!)
 
-5. **WAN-Zone für eingehenden Traffic konfigurieren:**
-   - Gehen Sie zurück zur Firewall-Übersicht
-   - Klicken Sie auf **"Edit"** bei der Zone **"wan"**
-   - Scrollen Sie zu **"Allow forward to destination zones:"**
-   - Aktivieren Sie: **"lan"** ✅
-   - Dies erlaubt Traffic vom Heimnetzwerk zum SMGW-Netzwerk
+**⚠️ WICHTIG:** Das SMGW kann nur an Adressen im eigenen Netzwerk (10.11.120.x) antworten. Ohne NAT und Routing funktioniert der Zugriff vom Heimnetzwerk nicht!
 
-6. **"Save & Apply"** klicken
-   - Warten Sie ca. 10-20 Sekunden
-   - Die Einstellungen werden übernommen
+**Schritt 1: Masquerading in Zone-Settings aktivieren**
 
-**Was macht das?**
-- **LAN → WAN Forward:** Erlaubt Weiterleitung von LAN (SMGW) → WAN (Heimnetzwerk) für ausgehenden Traffic
-- **WAN → LAN Forward:** Erlaubt Weiterleitung von WAN (Heimnetzwerk) → LAN (SMGW) für eingehenden Traffic von Home Assistant
-- **accept/accept/accept auf LAN:** Erlaubt alle Verbindungen innerhalb der LAN-Zone
+**In LuCI (http://192.168.0.119):**
 
-**⚠️ Wichtig:** Die Forward-Regeln allein reichen NICHT aus! Sie brauchen zusätzlich NAT/Masquerading (nächster Schritt)!
+1. **Network** → **Firewall** → **General Settings**
 
-**✓ Checkpoint:** Firewall ist konfiguriert!
+2. **Zeile "lan → wan"** → **"Edit"** klicken
 
-**💡 Warum JETZT?**
-- Wir haben LuCI gerade installiert
-- Nach der LAN-IP-Änderung (nächster Schritt) könnte der Zugriff komplizierter werden
-- Deshalb: **Firewall JETZT konfigurieren!**
+3. **Haken setzen bei "Masquerading"** ✅
 
-### 2.6a NAT/Masquerading für SMGW-Zugriff aktivieren (KRITISCH!)
+4. **"Save"** klicken
 
-**⚠️ WICHTIG:** Die meisten SMGW-Geräte haben keine konfigurierbare Gateway-Einstellung. Ohne NAT können sie nicht auf Anfragen vom Heimnetzwerk antworten!
+5. **Zeile "wan → lan"** → **"Edit"** klicken
 
-**Im GL.iNet SSH/Terminal (LuCI → System → Administration → Login):**
+6. **Haken setzen bei "Masquerading"** ✅
 
-1. **NAT-Regel hinzufügen:**
-   ```bash
-   iptables -t nat -A POSTROUTING -s 192.168.0.0/22 -d 10.11.120.0/24 -j MASQUERADE
-   ```
+7. **"Save"** klicken
 
-2. **Regel permanent machen:**
-   ```bash
-   echo 'iptables -t nat -A POSTROUTING -s 192.168.0.0/22 -d 10.11.120.0/24 -j MASQUERADE' >> /etc/firewall.user
-   ```
+8. **Zurück zur Hauptseite, dann "Save & Apply"** klicken (unten rechts)
 
-3. **Prüfen, ob die Regel aktiv ist:**
-   ```bash
-   iptables -t nat -L POSTROUTING -n -v | grep 10.11.120
-   ```
-   
-   Sie sollten die Regel sehen:
-   ```
-       0     0 MASQUERADE  all  --  *      *       192.168.0.0/22       10.11.120.0/24
-   ```
+**Schritt 2: NAT-Regel erstellen**
 
-**Was macht das?**
-- **Masquerading/NAT:** Umschreibt die Quell-IP von Home Assistant (z.B. 192.168.0.80) zu 10.11.120.1 (GL.iNet LAN-IP)
-- **Warum nötig?** Das SMGW kann nur an Adressen im eigenen Netzwerk (10.11.120.x) antworten
-- **Ohne NAT:** SMGW empfängt Anfragen von 192.168.0.80, kann aber nicht antworten (keine Route)
-- **Mit NAT:** SMGW empfängt Anfragen von 10.11.120.1, antwortet direkt zurück ✅
+**In LuCI:**
 
-**⚠️ Hinweis:** Falls Ihr Heimnetzwerk ein anderes Subnetz verwendet (z.B. 192.168.1.0/24), passen Sie die Regel entsprechend an!
+1. **Network** → **Firewall** → Tab **"NAT Rules"**
 
-**✓ Checkpoint:** NAT-Regel ist aktiv und permanent gespeichert!
+2. **"Add"** klicken (unten)
+
+3. **Konfigurieren:**
+   - **Name:** `SMGW-NAT`
+   - **Protocol:** `Any`
+   - **Outbound zone:** `lan`
+   - **Source address:** Dropdown öffnen → `custom` wählen → `192.168.0.0/22` eingeben
+   - **Destination address:** Dropdown öffnen → `custom` wählen → `10.11.120.0/24` eingeben
+   - **Action:** `MASQUERADE - Automatically rewrite...` auswählen
+
+4. **"Save"** klicken
+
+5. **Zurück zur Hauptseite, dann "Save & Apply"** klicken
+
+**Schritt 3: Statische Route hinzufügen**
+
+**In LuCI:**
+
+1. **Network** → **Routing** → **Static IPv4 Routes**
+
+2. **"Add"** klicken
+
+3. **Konfigurieren:**
+   - **Interface:** `lan` (wichtig!)
+   - **Target:** `10.11.120.0/24`
+   - **Gateway:** `0.0.0.0` ODER leer lassen
+   - **Metric:** leer lassen oder `0`
+
+4. **"Save"** klicken
+
+5. **"Save & Apply"** klicken (unten rechts)
+
+6. **Warten: 10-20 Sekunden**
+
+**✓ Checkpoint:** NAT und Routing sind konfiguriert - das SMGW ist jetzt vom Heimnetzwerk aus erreichbar!
 
 ### 2.7 LAN-IP des GL.iNet ändern (für SMGW-Netzwerk)
 
-**JETZT KOMMT DER WICHTIGE TEIL!**
+**Im GL.iNet Interface (http://192.168.0.119):**
 
-Das SMGW hat ein eigenes Netzwerk (10.11.120.x). Der GL.iNet muss als Bridge zwischen Ihrem Heimnetzwerk und dem SMGW-Netzwerk fungieren.
+1. **"Mehr Einstellungen"** → **"LAN IP"**
 
-**Zurück im GL.iNet Interface (http://192.168.8.1 oder http://192.168.0.119):**
-
-1. **Mehr Einstellungen öffnen:**
-   - Klicken Sie links auf **"Mehr Einstellungen"** oder **"More Settings"**
-   - Dann auf **"LAN IP"** oder **"LAN"**
-
-2. **Sie sehen die aktuelle LAN-Konfiguration:**
-   ```
-   Router LAN IP: 192.168.8.1
-   Subnetzmaske: 255.255.255.0
-   ```
-
-3. **ÄNDERN Sie dies zu:**
+2. **Ändern:**
    ```
    Router LAN IP:  10.11.120.1
    Subnetzmaske:   255.255.255.0
    ```
 
-4. **Speichern und Übernehmen klicken**
+3. **"Speichern und Übernehmen"** klicken
 
-5. **⚠️ Router startet neu** - **GEDULD IST GEFRAGT!**
-   - Der Neustart dauert **3-5 Minuten** (nicht nur 1 Minute!)
-   - **LED blinkt** → Neustart läuft
-   - **LED leuchtet dauerhaft** → Neustart fertig
-   - ☕ **Tipp:** Holen Sie sich einen Kaffee, das dauert wirklich!
+4. **Router startet neu - Warten: 3-5 Minuten** ☕
 
-6. **Nach dem Neustart (nach ca. 3-5 Minuten!):**
-   - Sie sind möglicherweise nicht mehr im GL.iNet Interface
-   - Das ist normal! Der Router hat jetzt eine neue LAN-IP (10.11.120.1)
-   - Sie erreichen ihn weiterhin über die **WAN-IP**: `http://192.168.0.119`
-   - Öffnen Sie: **`http://192.168.0.119`** und melden Sie sich an
-   - **Falls nicht erreichbar:** Warten Sie weitere 2 Minuten und versuchen es erneut!
+5. **Nach Neustart:** Öffnen Sie `http://192.168.0.119` und melden Sie sich an
 
 **✓ Checkpoint:** GL.iNet LAN hat jetzt die IP 10.11.120.1
-
-### 2.9 WAN-Zugriff auf Admin-Interface aktivieren (WICHTIG!)
-
-**⚠️ Standardmäßig ist der Zugriff von der WAN-Seite (http://192.168.0.119) BLOCKIERT!**
-
-Wir müssen das aktivieren, damit Sie später vom Haus aus auf den Router zugreifen können:
-
-**⚠️ HINWEIS:** Im GL.iNet Interface gibt es KEINE Option für WAN-Zugriff! Sie **müssen** LuCI verwenden!
-
-**In LuCI (EINZIGE funktionierende Methode):**
-
-1. **LuCI Admin Panel öffnen:**
-   - Im GL.iNet Interface: **"Mehr Einstellungen"** → **"LuCI Admin Panel"**
-   - Falls Anmeldung gefordert: Nutzen Sie Ihr Admin-Passwort
-
-2. **Firewall-Regel erstellen:**
-   - Gehen Sie zu: **"Network"** → **"Firewall"** → **"Traffic Rules"**
-   - Klicken Sie unten auf **"Add"** (Neue Regel hinzufügen)
-
-3. **Regel konfigurieren:**
-   ```
-   Name: Allow-Web-WAN
-   Protocol: TCP
-   Source zone: wan
-   Destination zone: Device (input)
-   Destination port: 80
-   Action: accept
-   ```
-   
-   **Schritt für Schritt:**
-   - **Name:** Geben Sie ein: `Allow-Web-WAN`
-   - **Protocol:** Wählen Sie: `TCP`
-   - **Source zone:** Wählen Sie: `wan`
-   - **Destination zone:** Wählen Sie: `Device (input)` oder `input`
-   - **Destination port:** Geben Sie ein: `80`
-   - **Action:** Wählen Sie: `accept` (sollte Standard sein)
-
-4. **⚠️ WICHTIG: Speichern Sie die Änderungen!**
-   - Klicken Sie auf **"Save & Apply"** (unten rechts)
-   - **Warten Sie 10-20 Sekunden** bis die Änderungen übernommen werden
-   - Oben rechts sollte "UNSAVED CHANGES" verschwinden
-
-**Was macht diese Regel?**
-- Erlaubt eingehende TCP-Verbindungen auf Port 80 von der WAN-Seite (Heimnetzwerk)
-- So können Sie vom Heimnetzwerk aus auf das Admin-Interface zugreifen
-
-**⚠️ Sicherheitshinweis:**
-- Diese Einstellung erlaubt den Zugriff auf das Admin-Interface vom Heimnetzwerk
-- Nutzen Sie ein **starkes Passwort** (haben Sie in 2.2 gesetzt!)
-- Die Fritzbox schützt den Router vor dem Internet
-
-**✓ Checkpoint:** WAN-Zugriff ist aktiviert - Sie können jetzt von überall im Heimnetzwerk auf http://192.168.0.119 zugreifen!
-
-### 2.10 DHCP für SMGW-Netzwerk anpassen
-
-**WICHTIG:** Das SMGW hat eine feste IP (**10.11.120.2**). Der DHCP-Server darf diese IP nicht vergeben!
-
-**Im GL.iNet Interface (http://192.168.0.119):**
-
-1. **"Mehr Einstellungen"** → **"LAN IP"** → **"DHCP Server"**
-
-2. **DHCP-Bereich einschränken:**
-   ```
-   DHCP aktiviert:    ✓ Ja
-   Start-IP:          10.11.120.10
-   End-IP:            10.11.120.50
-   Lease-Zeit:        12h (Standard)
-   ```
-   - **Wichtig:** Die SMGW-IP **10.11.120.2** liegt NICHT in diesem Bereich!
-   - **Speichern** klicken
-
-**Warum?** Die SMGW-IP **10.11.120.2** ist fest vorgegeben und darf nicht durch DHCP blockiert werden!
-
-**✓ Checkpoint:** DHCP ist korrekt konfiguriert
-
----
 
 **🎉 PHASE 2 ABGESCHLOSSEN!**
 
@@ -529,11 +411,11 @@ Ihr GL.iNet ist jetzt komplett konfiguriert:
 - ✅ Ethernet-WAN verbunden
 - ✅ **LuCI installiert** (wichtig!)
 - ✅ Feste IP-Adresse (z.B. 192.168.0.119)
-- ✅ **Firewall konfiguriert** (Forward-Regeln WAN↔LAN)
-- ✅ **NAT/Masquerading aktiviert** (kritisch für SMGW-Zugriff!)
+- ✅ **Firewall konfiguriert** (Forward-Regeln WAN↔LAN, Masquerading)
+- ✅ **NAT-Regel erstellt** (kritisch für SMGW-Zugriff!)
+- ✅ **Statische Route hinzugefügt** (10.11.120.0/24 über LAN)
 - ✅ LAN-IP geändert (10.11.120.1)
 - ✅ **WAN-Zugriff aktiviert** (Firewall-Regel "Allow-Web-WAN")
-- ✅ DHCP konfiguriert
 
 **Sie können das Ethernet-Kabel nun abstecken** und zum Zählerschrank gehen!
 
@@ -785,16 +667,24 @@ Der GL.iNet MT300N-V2 braucht nach einem Neustart **3-5 Minuten**, bis er vollst
 
 **Mögliche Ursachen:**
 
-1. **Addon nicht gestartet:**
-   - Prüfen Sie das Addon-Log in Home Assistant
-   - Suchen Sie nach "✅ Route is active and working!"
+1. **Statische Route fehlt:**
+   - Die wichtigste Ursache!
+   - Prüfen Sie: LuCI → Network → Routing → Static IPv4 Routes
+   - Muss vorhanden sein: Interface `lan`, Target `10.11.120.0/24`, Gateway `0.0.0.0`
+   - Falls nicht vorhanden: Wiederholen Sie Phase 2.6a Schritt 3
 
-2. **Falsche Gateway-IP im Addon:**
-   - Prüfen Sie die Addon-Konfiguration
-   - Gateway-IP muss mit der GL.iNet WAN-IP übereinstimmen
+2. **NAT-Regel fehlt oder deaktiviert:**
+   - Prüfen Sie: LuCI → Network → Firewall → NAT Rules
+   - Die Regel "SMGW-NAT" muss aktiviert sein (Haken gesetzt)
+   - Falls deaktiviert: Regel bearbeiten und "Enable" aktivieren
 
-3. **Firewall auf GL.iNet nicht korrekt konfiguriert:**
-   - Wiederholen Sie Phase 2.6 (Firewall-Einstellungen)
+3. **Masquerading nicht aktiviert:**
+   - Prüfen Sie: LuCI → Network → Firewall → General Settings
+   - Beide Zeilen `lan → wan` und `wan → lan` müssen Masquerading aktiviert haben
+   - Falls nicht: Wiederholen Sie Phase 2.6a Schritt 1
+
+4. **Firewall auf GL.iNet nicht korrekt konfiguriert:**
+   - Wiederholen Sie Phase 2.6 (Forward-Regeln WAN↔LAN)
 
 ### Problem 4: "GL.iNet Admin-Interface über WAN-IP nicht erreichbar"
 
